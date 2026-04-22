@@ -1,16 +1,22 @@
-// CSIDLS.cpp : Defines the entry point for the console application.
+// CSIDLS
+//
+// Enumerates the legacy CSIDL_* special folder values and their resolved paths.
+// Note: SHGetFolderPath and the CSIDL_* API are deprecated since Windows Vista
+// in favour of SHGetKnownFolderPath, but are used here intentionally to document
+// the CSIDL values themselves.
 //
 
 #include "stdafx.h"
 #include <windows.h>
 #include <shlobj.h>
 
-typedef struct SYSFOLDERS_tag {
+struct SYSFOLDERS
+{
 	int val;
 	LPCTSTR str;
-} SYSFOLDERS;
+};
 
-#define FX(x) x , #x
+#define FX(x) x , _T(#x)
 
 static const SYSFOLDERS SysFolders[] = {
 	FX( CSIDL_ADMINTOOLS )
@@ -45,13 +51,13 @@ static const SYSFOLDERS SysFolders[] = {
 	, FX( CSIDL_INTERNET )
 	, FX( CSIDL_INTERNET_CACHE )
 	, FX( CSIDL_LOCAL_APPDATA )
-	, FX( CSIDL_MYDOCUMENTS )
+	, FX( CSIDL_MYDOCUMENTS )	// Same value (0x0005) as CSIDL_PERSONAL
 	, FX( CSIDL_MYMUSIC )
 	, FX( CSIDL_MYPICTURES )
 	, FX( CSIDL_MYVIDEO )
 	, FX( CSIDL_NETHOOD )
 	, FX( CSIDL_NETWORK )
-	, FX( CSIDL_PERSONAL )
+	, FX( CSIDL_PERSONAL )		// Same value (0x0005) as CSIDL_MYDOCUMENTS
 	, FX( CSIDL_PRINTERS )
 	, FX( CSIDL_PRINTHOOD )
 	, FX( CSIDL_PROFILE )
@@ -73,36 +79,31 @@ static const SYSFOLDERS SysFolders[] = {
 };
 
 
+static constexpr LPCTSTR fmtstr = _T("%d\t%s\t%s\n");
+
 int _tmain(int /*argc*/, _TCHAR* /*argv*/[])
 {
-	puts( "Displays a list of the CSIDL_* values and their associated folders" );
+	_putts( _T("Displays a list of the CSIDL_* values and their associated folders") );
 
-	for ( auto item : SysFolders )
+	for ( const auto & item : SysFolders )
 	{
-		TCHAR szSystemPath[_MAX_PATH];
+		TCHAR szSystemPath[MAX_PATH];
 
-		HRESULT hRes;
-
-		hRes = SHGetFolderPath( NULL, item.val, NULL, SHGFP_TYPE_CURRENT, szSystemPath );
+		const HRESULT hRes = SHGetFolderPath( NULL, item.val, NULL, SHGFP_TYPE_CURRENT, szSystemPath );
 
 		if ( hRes == S_OK )
 		{
-			if ( szSystemPath[0] != '\0' )
-			{
-				printf( "%s\t%s\n", item.str, szSystemPath );
-			}
-			else
-			{
-				printf( "%s\t%s\n", item.str, "*** EMPTY STRING ***" );
-			}
-		}
-		else if ( hRes == S_FALSE )
-		{
-				printf( "%s\t%s\n", item.str, "*** DOESN'T EXIST ***" );
+			_tprintf( fmtstr, item.val, item.str,
+						szSystemPath[0] != _T('\0') ?
+							szSystemPath :
+							_T("*** EMPTY STRING ***") );
 		}
 		else
 		{
-			printf( "%s\t%s\n", item.str, "*** INVALID PARAMETER ***" );
+			_tprintf( fmtstr, item.val, item.str,
+				hRes == S_FALSE ?
+					_T("*** DOESN'T EXIST ***") :
+					_T("*** INVALID PARAMETER ***") );
 		}
 	}
 
